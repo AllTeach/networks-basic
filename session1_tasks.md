@@ -153,8 +153,6 @@ Try it:
 2. Run two instances of simple_bridge_client.py (or netcat).
 3. Exchange messages; type EXIT to terminate the session.
 
-Implementation note:
-- For the classroom, a threaded approach is easiest: one reader thread per client that forwards to the peer. You can also implement using selectors if you prefer a single-threaded approach.
 
 G. Troubleshooting & tips
 - If you get ConnectionRefusedError: check the server is running and you are connecting to the correct host/port.
@@ -163,8 +161,6 @@ G. Troubleshooting & tips
 - Remember: TCP is a byte stream. If messages seem joined or split, implement simple newline-based framing and read into a buffer until you see '\n'.
 
 H. Optional next steps (if you have time)
-- Convert the threaded bridge to a selector-based bridge (single threaded).
 - Add length-prefixed framing instead of newline-delimited lines.
-- Implement a multi-client chat server that broadcasts each client's messages to all others.
 
 Enjoy the lab — try each exercise, play with the code, and ask questions during the session.
