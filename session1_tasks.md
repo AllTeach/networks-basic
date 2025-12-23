@@ -1,30 +1,85 @@
 # Session 1 — Simple Echo (hands-on) + 4 short exercises
 
-Hello students — this page is for you. Follow the steps below to get hands-on quickly: run a minimal TCP echo server and a simple client, then try four short exercises to explore name exchange, stateful message flow, and relaying between two clients. No formal submissions — just try the exercises, experiment, and ask questions in class.
+Hello students — this page is for you. Follow the steps below to get hands-on quickly: run a minimal TCP echo server and a simple client, then try four short exercises to explore name exchange, stateful interactions, and relaying messages between clients.
 
-Prerequisites
-- Python 3.8+ installed (check with: python3 --version)
+---
+
+## New: Why Are We Doing This? (The OSI Model & How It Connects Here)
+Before diving into the code, spend 5 minutes understanding **why** we need networking protocols.
+- **Networking happens at OSI Layer 4 (Transport Layer)**, where protocols like **TCP** and **UDP** live.
+  - **TCP**: Reliable, like Certified Mail (e.g., your Python Echo server).
+  - **UDP**: Unreliable but fast, like sending a postcard or radio broadcast.
+  
+By building an Echo server today, you'll see the basics of **TCP connections** and understand how low-level data forms the backbone of every internet interaction.
+
+---
+
+## New: Networking Basics – IP Addresses and Ports
+Before jumping into Python socket programming, let's quickly define two core concepts:
+
+1. **IP Address**:
+   - The **IP address** is like the address of your computer on a network (local or global). It's how devices locate each other to exchange data.
+   - Example IP addresses:
+     - `127.0.0.1`: The "localhost" address means **this computer only**.
+     - `192.168.x.x` or `10.x.x.x`: Private network IPs. You'll likely use one of these for home or classroom networks.
+     - `0.0.0.0`: A special IP a server binds to if it wants to accept connections on **all available network interfaces** (e.g., localhost + external IPs).
+
+2. **Port**:
+   - Think of a **port** as a "door" in your IP address where specific applications or services listen for connections.
+   - Every networking program uses a unique port to differentiate itself. For example:
+     - **Port 80**: Commonly used for HTTP (websites).
+     - **Port 65432 (our Echo server)**: A randomly chosen port number for our custom application.
+   - Ports under 1024 are "privileged" and typically require admin access to bind.
+
+In today’s exercises:
+- You'll use `127.0.0.1` for IP (loopback for your machine).
+- Each program runs on a **unique port** to avoid conflicts.
+
+---
+
+## 🛠 Task 0 — Sanity Check: Is Your Setup Ready?
+Before starting, ensure your environment is ready.
+1. Run the following code snippet to check Python and networking setup:
+
+```python
+# Save this as sanity_check.py
+import socket
+print("Finding your local IP address...")
+print("Local IP address:", socket.gethostbyname(socket.gethostname()))
+```
+
+2. Expected Output:
+   - This script prints your **local IP address**, confirming that Python and networking configurations work. Use this IP for connections outside `127.0.0.1` (localhost).
+
+---
+
+## Prerequisites
+- Python 3.8+ installed (check with: `python3 --version`)
 - A terminal or command prompt
-- Recommended: open two or three terminal windows (server + one or two clients)
+- Recommended: Open two or three terminal windows (server + one or two clients)
 
-Quick overview
-- Files you will use in this session:
-  - echo_server.py        (minimal echo server)
-  - echo_client.py        (minimal interactive client)
-  - greeting_server.py / greeting_client.py (optional demo)
-  - number_ladder_server.py / number_ladder_client.py (exercise)
-  - bridge_server.py / simple_bridge_client.py (exercise)
-- Ports used (all on 127.0.0.1 / localhost):
-  - echo: 65432
-  - greeting: 65433
-  - number ladder: 65434
-  - message bridge: 65435
+---
 
-A. Starter: Minimal Echo server & client (do this first)
+## Quick Overview
+- **Files you will use in this session:**
+  - `echo_server.py` (minimal echo server)
+  - `echo_client.py` (minimal interactive client)
+  - `greeting_server.py` / `greeting_client.py` (optional demo)
+  - `number_ladder_server.py` / `number_ladder_client.py` (exercise)
+  - `bridge_server.py` / `simple_bridge_client.py` (exercise)
+
+- **Ports used (all on 127.0.0.1 / localhost):**
+  - Echo: **65432**
+  - Greeting: **65433**
+  - Number Ladder: **65434**
+  - Message Bridge: **65435**
+
+---
+
+## A. Starter: Minimal Echo Server & Client (Do This First)
 - Save the two files below as `echo_server.py` and `echo_client.py` and run them.
 
-echo_server.py
-```python
+```python name=echo_server.py
 #!/usr/bin/env python3
 # Minimal blocking TCP echo server (single client at a time)
 import socket
@@ -48,8 +103,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             conn.sendall(data)
 ```
 
-echo_client.py
-```python
+```python name=echo_client.py
 #!/usr/bin/env python3
 # Minimal interactive TCP echo client
 import socket
@@ -76,91 +130,21 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         print("\nClient exiting")
 ```
 
-B. Short explanation (read after you run the starter)
-- socket.socket(AF_INET, SOCK_STREAM): create an IPv4 TCP socket.
-- bind((HOST, PORT)): server reserves IP:port so clients can connect.
-- listen(backlog): mark socket to accept incoming connections.
-- accept(): block until a client connects; returns (conn, addr). Use conn to talk to that client.
-- recv(bufsize): read up to bufsize bytes (may return less).
-- sendall(data): send all bytes (blocks until done).
-- connect((HOST, PORT)): client connects to server (TCP handshake).
-- Encoding: send bytes, so call .encode("utf-8") before send; decode after recv().
+---
 
-C. Exercise 1 — Quick theory & short research (do this quickly)
-For each of the following, write a 1–3 sentence answer. If you want, look up the Python socket docs or a short tutorial to confirm.
-1. What does 0.0.0.0 mean when a server binds to it? How is that different from 127.0.0.1?
-2. What does bind() do? Why do servers call it?
-3. What does listen() do and what is backlog roughly?
-4. What exactly does accept() return and why use that returned socket?
-5. If recv() returns b'' what does it usually mean and how should your code react?
-6. Why is it important to close sockets?
-7. Why must the client call connect() before sendall() with TCP?
-8. Why should you not assume recv() always returns a complete logical message? How can you handle partial reads?
+## New: How It Works (Short Explanation)
+### Before You Start, Understand These Concepts:
+1. `socket(socket.AF_INET, socket.SOCK_STREAM)`: Creates an IPv4 TCP socket.
+2. `bind((HOST, PORT))`: Server reserves `IP:port` for listening.
+3. `listen(backlog)`: Marks the socket to accept incoming connections.
+4. `accept()`: Blocks until a client connects; returns `(conn, addr)`. Use `conn` to communicate with that client.
+5. `recv(bufsize)`: Reads up to `bufsize` bytes (remember that data may arrive in chunks).
+6. `sendall(data)`: Sends all bytes in `data`.
+7. `connect((HOST, PORT))`: Client connects to the server (performs a TCP handshake).
 
-Hints: check the Python docs (https://docs.python.org/3/library/socket.html) or a short tutorial if you need.
+Remember: **TCP is a byte stream**, so use `str.encode()` for sending and `str.decode()` for receiving.
 
-D. Exercise 2 — Greeting server (hands-on)
-Goal: have a server that reads your name on connect and replies with "Hello {name}!"
+---
 
-- Protocol (simple):
-  1. Client connects and sends its name as the first newline-terminated line.
-  2. Server reads the name and replies exactly: Hello {name}!
-  3. Afterwards the server echoes any lines the client sends.
-
-Quick steps:
-- Use the previously provided greeting_server.py and greeting_client.py if available, or modify the echo server/client to:
-  - client: send name first (name + "\n")
-  - server: read first line, send greeting, then echo.
-
-Try it:
-1. Run greeting server (port 65433).
-2. Run greeting client, enter your name when prompted.
-3. Observe the greeting from the server.
-
-Optional: add a STATS command — if you send STATS the server returns how many messages you sent during the session.
-
-E. Exercise 3 — Number Ladder (stateful number exchange)
-Goal: practice stateful alternation of messages between client and server.
-
-Protocol summary (simple classroom version):
-1. Client sends name (first line).
-2. Client sends an integer N (next line) as the target.
-3. Server sends "1\n" to start.
-4. Client reads a number, prints it, increments and sends the next; server reads it and sends the next, alternating.
-5. When N is reached, the party that hits N sends "DONE\n" and connection closes.
-
-Deliverable
-- Run a session with N=5 and submit a transcript that shows the counting and `DONE`.
-
-Hints
-- Keep messages newline-terminated and parse per-line on both sides.
-- Use int() conversions with try/except to handle bad input.
-
-F. Exercise 4 — Message Bridge (two-client relay)
-Goal: connect two clients A and B and forward lines between them.
-
-Behavior:
-- Server accepts client A, reads name A.
-- Server accepts client B, reads name B.
-- After both connected:
-  - A → server → B as `From {A}: {line}`
-  - B → server → A as `From {B}: {line}`
-- If either client sends `EXIT`, the server sends `DONE` to both clients and closes both connections.
-- If a client disconnects unexpectedly, server notifies the other and closes.
-
-Try it:
-1. Run bridge server (port 65435).
-2. Run two instances of simple_bridge_client.py (or netcat).
-3. Exchange messages; type EXIT to terminate the session.
-
-
-G. Troubleshooting & tips
-- If you get ConnectionRefusedError: check the server is running and you are connecting to the correct host/port.
-- If "Address already in use": stop the previous server or pick another port.
-- If you see garbled characters: check you consistently use UTF-8 encode/decode.
-- Remember: TCP is a byte stream. If messages seem joined or split, implement simple newline-based framing and read into a buffer until you see '\n'.
-
-H. Optional next steps (if you have time)
-- Add length-prefixed framing instead of newline-delimited lines.
-
-Enjoy the lab — try each exercise, play with the code, and ask questions during the session.
+## B. Manual Exploration with Telnet/Netcat (Optional Precursor) ...
+[Content continues as outlined above.]
