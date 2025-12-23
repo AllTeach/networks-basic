@@ -1,91 +1,94 @@
-# Session 1 — Simple Echo (hands-on) + 4 short exercises
+# Session 1 — Simple Echo (Hands-On) + Exploring Networking Basics
 
-Hello students — this page is for you. Follow the steps below to get hands-on quickly: run a minimal TCP echo server and a simple client, then try four short exercises to explore name exchange, stateful interactions, and relaying messages between clients.
-
----
-
-## New: Why Are We Doing This? (The OSI Model & How It Connects Here)
-Before diving into the code, spend 5 minutes understanding **why** we need networking protocols.
-- **Networking happens at OSI Layer 4 (Transport Layer)**, where protocols like **TCP** and **UDP** live.
-  - **TCP**: Reliable, like Certified Mail (e.g., your Python Echo server).
-  - **UDP**: Unreliable but fast, like sending a postcard or radio broadcast.
-  
-By building an Echo server today, you'll see the basics of **TCP connections** and understand how low-level data forms the backbone of every internet interaction.
+Welcome! This page is for you to get hands-on experience with Python networking concepts. By the end of this session, you’ll:
+- Run a minimal TCP echo server and a simple client.
+- Learn about IP addresses, ports, and how TCP works at a basic level.
+- Use tools like telnet/netcat to explore networking manually.
+- Tackle 4 fun exercises that will deepen your understanding of stateful interactions and client-server communication.
 
 ---
 
-## New: Networking Basics – IP Addresses and Ports
-Before jumping into Python socket programming, let's quickly define two core concepts:
+## Why Learn Networking? (Introduction to TCP/IP Basics)
+Before diving in, let’s understand **why** we’re learning this.
 
-1. **IP Address**:
-   - The **IP address** is like the address of your computer on a network (local or global). It's how devices locate each other to exchange data.
-   - Example IP addresses:
-     - `127.0.0.1`: The "localhost" address means **this computer only**.
-     - `192.168.x.x` or `10.x.x.x`: Private network IPs. You'll likely use one of these for home or classroom networks.
-     - `0.0.0.0`: A special IP a server binds to if it wants to accept connections on **all available network interfaces** (e.g., localhost + external IPs).
+At the heart of most networking programs is the **OSI Model**, which splits communication into 7 layers. We focus on **Layer 4 (Transport Layer)**, which handles **TCP** (Transmission Control Protocol) and **UDP** (User Datagram Protocol). Here’s the key difference:
 
-2. **Port**:
-   - Think of a **port** as a "door" in your IP address where specific applications or services listen for connections.
-   - Every networking program uses a unique port to differentiate itself. For example:
-     - **Port 80**: Commonly used for HTTP (websites).
-     - **Port 65432 (our Echo server)**: A randomly chosen port number for our custom application.
-   - Ports under 1024 are "privileged" and typically require admin access to bind.
+- **TCP**: Reliable, ensures all messages arrive in order (like Certified Mail or a phone call). We’ll use this for our exercises.
+- **UDP**: Lightweight, faster, but unreliable (like Postcards or Radio Broadcasts).
 
-In today’s exercises:
-- You'll use `127.0.0.1` for IP (loopback for your machine).
-- Each program runs on a **unique port** to avoid conflicts.
+By creating an Echo server today, you’ll see **how TCP's reliable connection works**, where devices exchange byte streams over virtual circuits.
 
 ---
 
-## 🛠 Task 0 — Sanity Check: Is Your Setup Ready?
-Before starting, ensure your environment is ready.
-1. Run the following code snippet to check Python and networking setup:
+## Networking Basics You Need to Know
+### What is an IP Address?
+Think of an **IP address** as the address of your computer on a network. It’s how devices locate each other and communicate.
 
+- `127.0.0.1`: Known as "localhost," this refers to your own computer.
+- `192.168.x.x` or `10.x.x.x`: Private network IPs, used for communication within a local network (e.g., at home or in class).
+- `0.0.0.0`: Special IP that tells a server to accept connections on **all available interfaces** (localhost + any external network IP).
+
+---
+
+### What is a Port?
+A **port** is like a "door" on your IP address where specific services (programs) listen for connections. Every networking app needs a unique port to differentiate itself.
+
+- Common ports:
+  - **Port 80**: HTTP (Web servers).
+  - **Port 443**: HTTPS (Secure web traffic).
+  - **Port 65432**: Our chosen port for demos today (random and above 1024 to avoid conflicts).
+
+---
+
+## 🛠 Task 0 — Confirm Your Environment is Ready
+Before starting, ensure Python and network configurations are set up on your machine.
+
+1. Run the script below to verify your IP address:
+   ```python
+   # Save this as sanity_check.py
+   import socket
+   print("Local IP address:", socket.gethostbyname(socket.gethostname()))
+   ```
+   - This confirms that Python’s `socket` library is working. The printed IP address (`192.168.x.x`, etc.) can be used for external device connections during exercises.
+   
+2. Check your Python version:
+   ```bash
+   python3 --version
+   ```
+   Ensure it’s **Python 3.8+**.
+
+---
+
+## Manual Exploration (Optional) — Using Telnet/Netcat
+Understanding networking means knowing **how it works under the hood**.
+
+1. Use `telnet` or `nc` to connect to a public website:
+   ```bash
+   telnet google.com 80
+   ```
+   Type:
+   ```
+   GET / HTTP/1.1
+   ```
+
+2. Observe the raw data returned. You’ve just simulated connecting directly to a web server!
+
+This task helps you see that **networking is about simple text-based communication over sockets**, demystifying tools like Python `socket`.
+
+---
+
+## 🛠 Task 1 — Start with an Echo Server
+Your first hands-on task is running a **minimal TCP echo server** and client. The server will listen for client messages and send them back unchanged.
+
+Save the two files below to your working directory.
+
+### Server Code: `echo_server.py`
 ```python
-# Save this as sanity_check.py
-import socket
-print("Finding your local IP address...")
-print("Local IP address:", socket.gethostbyname(socket.gethostname()))
-```
-
-2. Expected Output:
-   - This script prints your **local IP address**, confirming that Python and networking configurations work. Use this IP for connections outside `127.0.0.1` (localhost).
-
----
-
-## Prerequisites
-- Python 3.8+ installed (check with: `python3 --version`)
-- A terminal or command prompt
-- Recommended: Open two or three terminal windows (server + one or two clients)
-
----
-
-## Quick Overview
-- **Files you will use in this session:**
-  - `echo_server.py` (minimal echo server)
-  - `echo_client.py` (minimal interactive client)
-  - `greeting_server.py` / `greeting_client.py` (optional demo)
-  - `number_ladder_server.py` / `number_ladder_client.py` (exercise)
-  - `bridge_server.py` / `simple_bridge_client.py` (exercise)
-
-- **Ports used (all on 127.0.0.1 / localhost):**
-  - Echo: **65432**
-  - Greeting: **65433**
-  - Number Ladder: **65434**
-  - Message Bridge: **65435**
-
----
-
-## A. Starter: Minimal Echo Server & Client (Do This First)
-- Save the two files below as `echo_server.py` and `echo_client.py` and run them.
-
-```python name=echo_server.py
 #!/usr/bin/env python3
-# Minimal blocking TCP echo server (single client at a time)
 import socket
 
-HOST = "127.0.0.1"   # local only
-PORT = 65432         # free port >1024
+HOST = "127.0.0.1"
+PORT = 65432
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -96,16 +99,16 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     with conn:
         print("Connected by", addr)
         while True:
-            data = conn.recv(4096)
+            data = conn.recv(1024)
             if not data:
-                print("Client closed")
+                print("Client closed connection")
                 break
             conn.sendall(data)
 ```
 
-```python name=echo_client.py
+### Client Code: `echo_client.py`
+```python
 #!/usr/bin/env python3
-# Minimal interactive TCP echo client
 import socket
 
 HOST = "127.0.0.1"
@@ -113,38 +116,62 @@ PORT = 65432
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     s.connect((HOST, PORT))
-    print(f"Connected to {HOST}:{PORT}. Type lines (empty to quit).")
-    try:
-        while True:
-            line = input("> ")
-            if line == "":
-                print("Quitting.")
-                break
-            s.sendall((line + "\n").encode("utf-8"))
-            data = s.recv(4096)
-            if not data:
-                print("Server closed connection")
-                break
-            print("Echo:", data.decode("utf-8", errors="replace").rstrip("\n"))
-    except KeyboardInterrupt:
-        print("\nClient exiting")
+    print("Connected to server. Type your message (empty input to quit).")
+    while True:
+        message = input("> ")
+        if not message:
+            print("Goodbye!")
+            break
+        s.sendall(message.encode("utf-8"))
+        data = s.recv(1024)
+        print("Received:", data.decode("utf-8"))
 ```
 
----
-
-## New: How It Works (Short Explanation)
-### Before You Start, Understand These Concepts:
-1. `socket(socket.AF_INET, socket.SOCK_STREAM)`: Creates an IPv4 TCP socket.
-2. `bind((HOST, PORT))`: Server reserves `IP:port` for listening.
-3. `listen(backlog)`: Marks the socket to accept incoming connections.
-4. `accept()`: Blocks until a client connects; returns `(conn, addr)`. Use `conn` to communicate with that client.
-5. `recv(bufsize)`: Reads up to `bufsize` bytes (remember that data may arrive in chunks).
-6. `sendall(data)`: Sends all bytes in `data`.
-7. `connect((HOST, PORT))`: Client connects to the server (performs a TCP handshake).
-
-Remember: **TCP is a byte stream**, so use `str.encode()` for sending and `str.decode()` for receiving.
+### Steps:
+1. Open a terminal and run `echo_server.py`.
+2. Open another terminal and run `echo_client.py`.
+3. Type messages in the client terminal and see the server echo them back.
 
 ---
 
-## B. Manual Exploration with Telnet/Netcat (Optional Precursor) ...
-[Content continues as outlined above.]
+## 🛠 Exercise 2 — Greeting Server
+Goal: Extend the Echo server so it greets users by name.
+
+**Protocol**:
+1. Client sends its name (`John\n`).
+2. Server replies: **Hello John!**
+3. Server continues echoing any additional messages.
+
+---
+
+## 🛠 Exercise 3 — Number Ladder
+Goal: Implement a game where the client and server take turns sending numbers until a target is reached.
+
+**Protocol**:
+1. Client sends its name and target integer `N`.
+2. Server sends "1").
+3. Client reads the number, increments it, and sends it back.
+4. The sequence continues until one party sends `N`, followed by `DONE`.
+
+---
+
+## 🛠 Exercise 4 — Message Bridge
+Goal: Relay messages between two clients using the server as a "bridge."
+
+**Protocol**:
+1. Server accepts Client A and Client B.
+2. Messages are relayed:
+   - A → Server → B as `From A: {message}`
+   - B → Server → A as `From B: {message}`
+3. If any client sends `EXIT`, both clients disconnect with a `DONE` message.
+
+---
+
+## Troubleshooting
+- **Connection refused**: Ensure the server is running before starting the client.
+- **Address already in use**: Restart the server or choose another port.
+- **Mixed messages**: Ensure proper encoding/decoding in UTF-8.
+
+---
+
+Enjoy the exercises, and don’t hesitate to ask questions during the session!
