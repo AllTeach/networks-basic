@@ -72,7 +72,7 @@ Notes on the code
 
 ## Part 3 — Experiments
 
-### Experiment A — Local Test (expected: Success)
+### Experiment A — Local Test 
 1. Run the server:
    - `python3 http_server.py`
 2. On the same computer open a browser and go to:
@@ -81,7 +81,7 @@ Notes on the code
    - Browser should display "Hello from Server".
    - The Python terminal prints the browser request (including `User-Agent` and `Host` header).
 
-### Experiment B — LAN Test (expected: Success)
+### Experiment B — LAN Test 
 1. Keep the server running.
 2. Find your computer's local IPv4 address:
    - Windows: `ipconfig`  
@@ -93,9 +93,9 @@ Notes on the code
 5. Observation:
    - The page should load on the phone. Because the server bound to `0.0.0.0`, it accepted connections from the LAN interface.
 
-### Experiment C — WAN Test (expected: Failure)
+### Experiment C — WAN Test 
 1. Keep the server running.
-2. Disconnect your phone from Wi‑Fi and switch to Cellular (LTE/4G/5G).
+2. Disconnect your phone from Wi‑Fi and switch to Cellular or try a friend's server from you browser
 3. Try to load:
    - `http://<YOUR_COMPUTER_IP>:8080` (the same local IP from Experiment B)
 4. Observation:
@@ -119,24 +119,10 @@ Notes on the code
 
 ---
 
-## Extra Activities & Extensions (optional)
+## Extra Activities 
 
 - Improve `http_server.py` to:
-  - Parse the request line and headers properly.
   - Serve `index.html` from the current directory instead of sending a hardcoded body.
-  - Return proper `Content-Type` headers based on the file type.
-  - Handle multiple requests per connection (keep‑alive) or support multi-threading for concurrent clients.
-
-- Try sending a raw HTTP request with `telnet` or `nc`:
-  ```
-  telnet 127.0.0.1 8080
-  GET / HTTP/1.1
-  Host: 127.0.0.1:8080
-
-  ```
-  (Press Enter twice to end headers) — observe the raw response.
-
-- Inspect packets using `tcpdump` or Wireshark while performing the experiments to see the TCP handshake and HTTP text on the wire.
 
 ---
 
@@ -146,7 +132,3 @@ You just built a minimal HTTP server over raw TCP. This exercise demonstrates:
 - How HTTP relies on TCP’s reliable, ordered stream.
 - The difference between binding to `127.0.0.1` (local only) and `0.0.0.0` (all interfaces).
 - Why local private addresses work only inside your LAN and how that leads to NAT / public IP concepts.
-
-Next steps (suggested)
-- Learn about NAT and public IPs (to explain Experiment C) and DNS (to map domain names to IPs).  
-- Implement a file server that serves `index.html` and static assets, then move on to WebSockets (which requires a small amount of JavaScript in the browser).
