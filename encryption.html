@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 5: The Glass House (Sniffing & Security)</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px;
+            background-color: #fafafa;
+        }
+        h1 { color: #2c3e50; border-bottom: 3px solid #2c3e50; padding-bottom: 15px; }
+        h2 { color: #d35400; margin-top: 50px; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
+        h3 { color: #2980b9; margin-top: 30px; }
+        /* Code Block Styling */
+        pre {
+            background-color: #282c34;
+            color: #abb2bf;
+            padding: 20px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9em;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .filename {
+            font-family: 'Consolas', monospace;
+            font-weight: bold;
+            color: #555;
+            background: #e1e4e8;
+            padding: 4px 10px;
+            border-radius: 4px 4px 0 0;
+            display: inline-block;
+            margin-bottom: 0;
+            border: 1px solid #ccc;
+            border-bottom: none;
+        }
+        /* Diagram Box Styling */
+        .diagram-container {
+            text-align: center;
+            margin: 30px 0;
+            padding: 20px;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        img {
+            max-width: 100%;
+            height: auto;
+            max-height: 350px;
+        }
+        .caption {
+            display: block;
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: #666;
+            font-style: italic;
+        }
+        /* Note Box Styling */
+        .note {
+            background-color: #e8f4f8;
+            border-left: 5px solid #2980b9;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 0 4px 4px 0;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Module 5: The Glass House (Sniffing & Security)</h1>
+
+    <p><strong>Objective:</strong> Today, we are going to prove that the internet is "broken" by default.</p>
+    <ol>
+        <li><strong>The Victim:</strong> We will run a basic HTTP Server with a "Login" page.</li>
+        <li><strong>The Hacker:</strong> We will write a script to intercept the traffic and steal passwords.</li>
+        <li><strong>The Fix:</strong> We will upgrade the server to HTTPS (TLS) and watch the hacker fail.</li>
+    </ol>
+
+    <hr>
+
+    <h2>Part 1: The Trap (Unsecured HTTP)</h2>
+
+    <h3>Theory: The Postcard Analogy</h3>
+    <p>When you use <strong>HTTP</strong> (without the 'S'), you are sending data across the internet like writing on a <strong>Postcard</strong>. Anyone who handles the postcard (the WiFi router, the ISP, the NSA) can read exactly what you wrote. They don't need to "hack" anything; they just have to look at it.</p>
+
+    <h3>🛠️ Step 1: Create the Fake Bank</h3>
+    <p>First, we need a login page. Save this code as <code>index.html</code> in your project folder.</p>
+
+    <div class="filename">File: index.html</div>
+<pre>
+&lt;!DOCTYPE html&gt;
+&lt;html lang="en"&gt;
+&lt;head&gt;
+    &lt;meta charset="UTF-8"&gt;
+    &lt;title&gt;Secure Bank Login&lt;/title&gt;
+    &lt;style&gt;
+        body { font-family: sans-serif; display: flex; justify-content: center; padding-top: 50px; background-color: #f0f2f5; }
+        .login-box { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); text-align: center; }
+        input { display: block; width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 4px; }
+        button { background-color: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; width: 100%; }
+        button:hover { background-color: #0056b3; }
+    &lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+    &lt;div class="login-box"&gt;
+        &lt;h2&gt;MyBank Login&lt;/h2&gt;
+        &lt;p&gt;🔒 Secure Connection&lt;/p&gt;
+        &lt;!-- The form sends a POST request to our server --&gt;
+        &lt;form action="/" method="POST"&gt;
+            &lt;input type="text" name="username" placeholder="Username" required&gt;
+            &lt;input type="password" name="password" placeholder="Password" required&gt;
+            &lt;button type="submit"&gt;Sign In&lt;/button&gt;
+        &lt;/form&gt;
+    &lt;/div&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</pre>
+
+    <h3>🛠️ Step 2: The Victim Server</h3>
+    <p>We need a Python server that can serve this file and accept the login data.</p>
+
+    <div class="filename">File: victim_server.py</div>
+<pre>
+from http.server import HTTPServer, SimpleHTTPRequestHandler
+
+class MyHandler(SimpleHTTPRequestHandler):
+    
+    # We override this method to handle the POST request
+    def do_POST(self):
+        # 1. Get the size of data
+        content_length = int(self.headers['Content-Length'])
+        # 2. Read the data
+        post_data = self.rfile.read(content_length)
+        
+        # 3. Print it to the Server Console (For us to see)
+        print("\n--- SERVER RECEIVED DATA ---")
+        print(post_data.decode('utf-8')) 
+        print("----------------------------\n")
+
+        # 4. Send a success response
+        self.send_response(200)
+        self.send_header('Content-type', 'text/html')
+        self.end_headers()
+        self.wfile.write(b"&lt;html&gt;&lt;h1 style='color:green'&gt;Login Received!&lt;/h1&gt;&lt;p&gt;Check the SNIFFER terminal...&lt;/p&gt;&lt;/html&gt;")
+
+print("The Victim Server is running on Port 8080...")
+httpd = HTTPServer(('0.0.0.0', 8080), MyHandler)
+httpd.serve_forever()
+</pre>
+
+    <hr>
+
+    <h2>Part 2: The Hacker (Man-in-the-Middle)</h2>
+
+    <p>Now, we act as the attacker. We will write a <strong>Proxy Sniffer</strong>. Instead of connecting to the server directly, the victim will connect to <em>us</em>, and we will forward their traffic to the real server—while logging everything.</p>
+
+    <div class="diagram-container">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e7/Man-in-the-middle_attack.svg/1024px-Man-in-the-middle_attack.svg.png" alt="MITM Attack Diagram">
+        <span class="caption">Figure 1: The Man-in-the-Middle (Sniffer) intercepts the data before forwarding it.</span>
+    </div>
+
+    <div class="filename">File: sniffer.py</div>
+<pre>
+import socket
+import threading
+
+# Configuration
+LISTEN_PORT = 9000   # The Hacker's Trap Port
+TARGET_HOST = '127.0.0.1'
+TARGET_PORT = 8080   # The Real Server Port
+
+def handle_client(client_socket):
+    # Connect to the REAL server
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        server_socket.connect((TARGET_HOST, TARGET_PORT))
+    except:
+        print("❌ Could not connect to the Victim Server!")
+        client_socket.close()
+        return
+
+    # Start threads to forward data in both directions
+    # Client -> Hacker -> Server
+    threading.Thread(target=forward, args=(client_socket, server_socket, "REQUEST (Stealing Data)")).start()
+    # Server -> Hacker -> Client
+    threading.Thread(target=forward, args=(server_socket, client_socket, "RESPONSE")).start()
+
+def forward(source, destination, direction):
+    while True:
+        try:
+            data = source.recv(4096)
+            if len(data) == 0: break 
+
+            # --- THE HACK: PRINT THE DATA ---
+            try:
+                # Try to decode as text to read passwords
+                print(f"\n[{direction}]:\n{data.decode('utf-8')}")
+            except:
+                # If it's binary (images/files), just print raw bytes
+                print(f"\n[{direction}]: {data}") 
+            # -------------------------------
+
+            destination.send(data)
+        except:
+            break
+    source.close()
+    destination.close()
+
+def start_sniffer():
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.bind(('0.0.0.0', LISTEN_PORT))
+    server.listen(5)
+    print(f"😈 Sniffer listening on Port {LISTEN_PORT}...")
+    
+    while True:
+        client_sock, addr = server.accept()
+        print(f"⚡ Victim connected from {addr}")
+        threading.Thread(target=handle_client, args=(client_sock,)).start()
+
+if __name__ == '__main__':
+    start_sniffer()
+</pre>
+
+    <div class="note">
+        <strong>🧨 The Experiment:</strong><br>
+        1. Run <code>victim_server.py</code> in Terminal 1.<br>
+        2. Run <code>sniffer.py</code> in Terminal 2.<br>
+        3. Open Browser and go to: <code>http://localhost:9000</code> (The Sniffer's port).<br>
+        4. Enter a Username/Password and click Sign In.<br>
+        5. <strong>Look at Terminal 2.</strong> You will see the password in <strong>PLAIN TEXT</strong>.
+    </div>
+
+    <hr>
+
+    <h2>Part 3: The Theory (Alice, Bob, and the Locked Box)</h2>
+
+    <h3>1. The Problem: "The Shared Secret"</h3>
+    <p>Imagine Alice wants to send a locked box to Bob. If she locks it with a key, she has to mail the key to Bob too. The postman (Sniffer) can steal the key and open the box later. This is <strong>Symmetric Encryption</strong>.</p>
+    
+    <div class="diagram-container">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Symmetric_key_encryption.svg/800px-Symmetric_key_encryption.svg.png" alt="Symmetric Encryption Diagram">
+        <span class="caption">Figure 2: Symmetric Encryption (One key for both locking and unlocking).</span>
+    </div>
+
+    <h3>2. The Solution: Asymmetric Encryption</h3>
+    <p>We use two keys: A <strong>Public Key</strong> (locks the box) and a <strong>Private Key</strong> (unlocks the box).</p>
+    
+    <div class="diagram-container">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f9/Public_key_encryption.svg/800px-Public_key_encryption.svg.png" alt="Asymmetric Encryption Diagram">
+        <span class="caption">Figure 3: Asymmetric Encryption (Different keys for encryption and decryption).</span>
+    </div>
+
+    <h3>3. The Handshake (How TLS Works)</h3>
+    <ol>
+        <li><strong>Client Hello:</strong> "I want to talk securely."
+        <li><strong>Server Hello:</strong> "Here is my Certificate (Public Key)."
+        <li><strong>Key Exchange:</strong> Client creates a secret password, encrypts it with the Public Key, and sends it back. (The Sniffer cannot read this).</li>
+        <li><strong>Secure Chat:</strong> Both sides now have the secret password.</li>
+    </ol>
+
+    <hr>
+
+    <h2>Part 4: The Fix (Generating Keys & Enabling TLS)</h2>
+
+    <h3>Step 1: Generate Keys (Run this once)</h3>
+    <p>We need to generate our own "ID Card" (Certificate) and "Secret Key".</p>
+
+    <div class="filename">File: generate_keys.py</div>
+<pre>
+from cryptography import x509
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import serialization, hashes
+from cryptography.hazmat.primitives.asymmetric import rsa
+import datetime
+
+# 1. Generate Private Key
+key = rsa.generate_private_key(
+    public_exponent=65537,
+    key_size=2048,
+    backend=default_backend()
+)
+
+# 2. Generate a Self-Signed Certificate
+subject = x509.Name([
+    x509.NameAttribute(x509.NameOID.COMMON_NAME, u"localhost"),
+])
+
+cert = x509.CertificateBuilder().subject_name(
+    subject
+).issuer_name(
+    subject
+).public_key(
+    key.public_key()
+).serial_number(
+    x509.random_serial_number()
+).not_valid_before(
+    datetime.datetime.utcnow()
+).not_valid_after(
+    datetime.datetime.utcnow() + datetime.timedelta(days=365)
+).sign(key, hashes.SHA256(), default_backend())
+
+# 3. Write files to disk
+with open("key.pem", "wb") as f:
+    f.write(key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.TraditionalOpenSSL,
+        encryption_algorithm=serialization.NoEncryption()
+    ))
+
+with open("cert.pem", "wb") as f:
+    f.write(cert.public_bytes(serialization.Encoding.PEM))
+
+print("✅ Created cert.pem (Public ID) and key.pem (Private Secret)!")
+</pre>
+
+    <h3>Step 2: The Secure Server</h3>
+    <p>We wrap our server socket with the SSL Context.</p>
+    
+    <div class="diagram-container">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/ae/SSL_handshake_with_two_way_authentication_with_certificates.svg/800px-SSL_handshake_with_two_way_authentication_with_certificates.svg.png" alt="TLS Handshake Diagram">
+        <span class="caption">Figure 4: The Handshake. 1. Hello 2. Certificate 3. Key Exchange.</span>
+    </div>
+
+    <div class="filename">File: secure_server.py</div>
+<pre>
+import ssl
+from http.server import HTTPServer, SimpleHTTPRequestHandler
+
+# --- THEORY NOTE: The SSL Context ---
+# The Context is the "Configuration Object" for our security.
+# It holds our keys and decides which protocol version to use (TLS).
+context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+
+# Load the "ID Card" (Certificate) and the "Secret Mind" (Private Key)
+context.load_cert_chain(certfile="cert.pem", keyfile="key.pem")
+
+class SecureHandler(SimpleHTTPRequestHandler):
+    def do_POST(self):
+        # 1. Receive Data (This data is ALREADY decrypted by the wrapper!)
+        content_length = int(self.headers['Content-Length'])
+        post_data = self.rfile.read(content_length)
+        
+        print("\n🔒 SECURE SERVER RECEIVED DATA (Decrypted):")
+        print(post_data.decode('utf-8')) 
+        print("-------------------------------------------\n")
+
+        # 2. Send Response (The wrapper will Encrypt this automatically)
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"&lt;html&gt;&lt;h1 style='color:green'&gt;Secure Login Success!&lt;/h1&gt;&lt;/html&gt;")
+
+print("🔒 SECURE Server running on Port 8080 (HTTPS)...")
+
+# 1. Create the Standard HTTP Server (Unsecured)
+httpd = HTTPServer(('0.0.0.0', 8080), SecureHandler)
+
+# 2. THE WRAPPER (The Magic Line)
+# We take the standard socket (httpd.socket) and wrap it inside our SSL Context.
+httpd.socket = context.wrap_socket(httpd.socket, server_side=True)
+
+# 3. Start Listening
+httpd.serve_forever()
+</pre>
+
+    <div class="note">
+        <strong>🧨 The Final Test:</strong><br>
+        1. Run <code>secure_server.py</code>.<br>
+        2. Run <code>sniffer.py</code>.<br>
+        3. Go to <code>https://localhost:8080</code> directly.<br>
+        4. Now try going through the Sniffer: <code>http://localhost:9000</code>.<br>
+        5. Check the Sniffer terminal. You will see unreadable <strong>GARBAGE</strong> (Encrypted bytes).
+    </div>
+
+</body>
+</html>
