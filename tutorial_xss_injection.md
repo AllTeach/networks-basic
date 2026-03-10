@@ -1,4 +1,3 @@
-Here is the complete Markdown file. You can click the "Copy" button in the top right corner of the block below and paste it directly into a new `.md` file on GitHub.
 
 ```markdown
 # Tutorial 6: The Trojan Horse (Cross-Site Scripting / XSS)
